@@ -24,7 +24,7 @@ def allowed(path):
         return True
     if path.startswith('docs/') and p.suffix == '.md':
         return True
-    return path.startswith('tools/') and p.suffix in {'.py','.ps1','.json'}
+    return path == 'tools/hooks/pre-push' or (path.startswith('tools/') and p.suffix in {'.py','.ps1','.json'})
 
 
 def audit(paths):
@@ -57,6 +57,10 @@ if __name__ == '__main__':
         paths=[p.relative_to(ROOT).as_posix() for p in ROOT.rglob('*') if p.is_file()
                and not any(part in {'.local','runtime','backups','__pycache__','.git'} for part in p.relative_to(ROOT).parts)]
     errors=audit([p for p in paths if p])
+    if (ROOT/'.git').exists():
+        staged=subprocess.run(['git','diff','--cached','--no-ext-diff','--unified=0'],cwd=ROOT,capture_output=True,check=True)
+        if secret.search(staged.stdout.decode('utf-8','replace')):
+            errors.append('Possible credential in staged patch; contents withheld.')
     for error in errors: print(error,file=sys.stderr)
     print(f'Sharing audit: {len(paths)} candidate files, {len(errors)} problems.')
     sys.exit(bool(errors))

@@ -25,6 +25,7 @@ versão compartilhada, não um lugar para misturar alterações sem revisão.
 
 Clone o mesmo repositório privado. Antes de trabalhar, atualize com
 `tools/Update-Project.ps1`. Faça uma branch própria e siga o mesmo fluxo.
+Execute `tools/Install-Hooks.ps1` uma vez para habilitar auditoria antes do push.
 Não copie seus saves/logs para o repositório. Para testar no jogo, use uma
 cópia compatível e feche jogo/servidor antes de Apply:
 

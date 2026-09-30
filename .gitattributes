@@ -4,3 +4,4 @@
 *.yml text eol=lf
 *.json text eol=lf
 *.ps1 text eol=crlf
+tools/hooks/* text eol=lf
