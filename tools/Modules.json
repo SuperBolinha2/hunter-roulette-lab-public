@@ -1,0 +1,5 @@
+[
+  "server.py", "protocol.py", "bot_ai.py", "bot_actions.py",
+  "bot_presentation.py", "weapon_skills.py", "hero_skills.py",
+  "hero_shop.py", "fair_duel.py", "katie_guard.py"
+]

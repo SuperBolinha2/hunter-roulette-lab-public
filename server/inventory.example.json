@@ -1,0 +1,20 @@
+{
+  "tutorialFinished": true,
+  "homeLevel": 1,
+  "homeExp": 0,
+  "exploreLevel": 0,
+  "exploreBoxPack": [],
+  "exploreCells": [],
+  "pvpCoin": 0,
+  "selectedHero": 0,
+  "heroes": [
+    {"id": 0, "starLevel": 1, "skillId": 10000, "fightLevel": 1, "fightExp": 0, "unlockCards": []},
+    {"id": 1, "starLevel": 1, "skillId": 10001, "fightLevel": 1, "fightExp": 0, "unlockCards": []}
+  ],
+  "guns": [{"id": 0}, {"id": 1}],
+  "heroGuns": [{"heroId": 0, "gunId": 0}, {"heroId": 1, "gunId": 1}],
+  "skins": [],
+  "cards": [],
+  "items": [{"id": 101000, "number": 0}, {"id": 102000, "number": 0}],
+  "equippedSkins": []
+}
