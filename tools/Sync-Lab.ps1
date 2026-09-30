@@ -39,6 +39,8 @@ function Get-SafeBody($pair) {
     return $body
 }
 function BodyHash([string]$body) {
+    # Git normalizes text on checkout; that must not look like a conflict.
+    $body=$body.Replace("`r`n","`n")
     $sha=[Security.Cryptography.SHA256]::Create()
     try { return ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($body)))).Replace('-','') } finally { $sha.Dispose() }
 }
