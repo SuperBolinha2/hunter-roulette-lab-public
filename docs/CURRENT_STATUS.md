@@ -4,6 +4,11 @@
 Source-copy/CI validation must also pass before publication. Local three-seat
 shop gameplay is manually playable; not all modes/features are complete.
 
+For navigation and per-feature progress, use the [game checklist](FEATURE_CHECKLIST.md).
+The [technical catalog](FEATURE_CATALOG.md) inventories native references,
+not supported-feature claims. Keep completion status in the checklist and link
+specific evidence; do not treat a visible screen or generic ACK as a working system.
+
 Recent validation: Arthur duel, Shelby HP/chips trades, Annie own blank-to-red
 and enemy blank-to-live substitutions. Katie robot presentation corrected via
 native Buff.existTyp3 on impact and2 on expiry; blanks preserve protection.

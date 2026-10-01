@@ -1,6 +1,12 @@
 # Hunter Roulette Lab
 
+[Guia / README](#português) · [Checklist](docs/FEATURE_CHECKLIST.md) · [Catálogo técnico](docs/FEATURE_CATALOG.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+
 [Português](#português) · [Русский](#русский) · [Français](#français) · [Español](#español)
+
+Mapa de funções: **confirmado / parcial / falta testar / falta implementar**. A [checklist](docs/FEATURE_CHECKLIST.md) tem índice por menu e espaços para novas descobertas; o [catálogo](docs/FEATURE_CATALOG.md) guarda telas, modos e cfgIds. Ambos estão em português, com nomes originais do jogo.
+
+Русский: список функций и их состояния пока на португальском, с оригинальными названиями меню. · Français : liste des fonctions et de leur état, pour l'instant en portugais, avec les noms d'origine. · Español: lista de funciones y estados, por ahora en portugués, con los nombres originales.
 
 ## Português
 
