@@ -1,6 +1,6 @@
 # Current status — backend v63, 2026-09-30
 
-285 local standard-library tests passed in the laboratory before this export.
+286 local standard-library tests passed in the laboratory before this export.
 Source-copy/CI validation must also pass before publication. Local three-seat
 shop gameplay is manually playable; not all modes/features are complete.
 
@@ -20,6 +20,10 @@ sections supersede earlier claims. Never infer that an item/skill passing one
 manual test is correct in every mode or combination.
 
 ## Portability limitations
+
+The native match opening was confirmed with two characters in the local lab.
+It requires a client-side callback patch as well as the backend changes.
+See [match introduction setup and limitations](MATCH_INTRO.md).
 
 Backend and tests are portable. A compatible modified client is needed for
 visual gameplay. Client binaries/assets, original Lua dumps and historical

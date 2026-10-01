@@ -171,6 +171,22 @@ BOT_ACTION_DECISION_DELAY = ACTION_DECISION_PAUSE
 # that opening sequence finishes; do not invent replacement client timings.
 PVP_OPENING_SEQUENCE_DELAY = 11.0
 
+# Mode-1 TV_kaichang Slate timeline lengths, inspected from the copied bundle.
+# Base and difficulty variants reference the same opening prefabs.
+PVP_OPENING_HERO_SECONDS = {
+    0: 8.0, 1: 6.8666668, 13: 7.3, 14: 8.0, 15: 7.6333337,
+    16: 7.6000004, 17: 6.4, 35: 8.0, 36: 8.0, 38: 8.0,
+}
+
+
+def pvp_opening_cinema_delay(gamer: bytes) -> float:
+    hero = parse_bytes_field(gamer, 9) or b''
+    hero_id = parse_varint_field(hero, 1) or 0
+    seconds = PVP_OPENING_HERO_SECONDS.get(hero_id, 8.0)
+    # Cover the native return-to-table with the participant panel, rather
+    # than adding idle time after the cutscene. Scale with the test clock.
+    return max(0.0, seconds - 0.1) * PVP_OPENING_SEQUENCE_DELAY / 11.0
+
 # The client-side ``TreasureBoxOpenAllWindow`` lays out up to twelve cells
 # (three rows of four) and computes the animation length as ``len(cells) * 5``.
 # Do not impose a smaller state-transition limit: a partial 32/5 resolution
@@ -3276,15 +3292,60 @@ async def serve_client(
                             current_index=0,
                         )
                         published_pvp_info = current_pvp_info
+                        # Native participant introduction (255/16, status 15).
+                        # Keep the playable snapshot separate: presentation must
+                        # finish before 255/7 starts the existing ammo choreography.
+                        intro_delay = PVP_OPENING_SEQUENCE_DELAY * (4.0 / 11.0)
+                        cinema_delay = pvp_opening_cinema_delay(current_pvp_player)
+                        intro_info = pvp_info_with_state(
+                            current_pvp_info, current_pvp_player, current_pvp_bot,
+                            round_number=current_pvp_round,
+                            turn_number=current_pvp_turn_number, current_index=0,
+                            status=15,
+                            additional_gamers=((current_pvp_extra_bot,)
+                                               if current_pvp_extra_bot else ()),
+                        )
                         out_body = pvp_gamer_load_body(
                             account.gid,
-                            current_pvp_info,
+                            pvp_info_with_state(
+                                intro_info, current_pvp_player, current_pvp_bot,
+                                round_number=current_pvp_round,
+                                turn_number=current_pvp_turn_number,
+                                current_index=0, status=18,
+                                additional_gamers=((current_pvp_extra_bot,)
+                                                   if current_pvp_extra_bot else ()),
+                            ),
                             current_time=server_time,
                         )
                         # The bundled client uses NotifyPvpGamerAmmo (255/7)
                         # to seed gameInitInfo and build the opening ammo HUD;
                         # then NotifyGamerPvpNextRound (255/1) enables turns.
-                        post_frames.append(
+                        post_frames.append(encode_frame(
+                            255, 11, pb_message(pb_varint(2, 18), pb_varint(3, 0)),
+                            error=0, index=0, length_mode=length_mode,
+                        ))
+                        post_frames.append(encode_frame(
+                            255, 18, pb_bytes(1, 'local-opening'),
+                            error=0, index=0, length_mode=length_mode,
+                        ))
+                        # Patched client queues this panel until the native
+                        # OnCutSceneFinish(-1) callback, in the same UI frame.
+                        post_frames.append(encode_frame(
+                            255, 16, pb_bytes(1, intro_info),
+                            error=0, index=0, length_mode=length_mode,
+                        ))
+                        delayed_frames.append((cinema_delay, encode_frame(
+                            255, 11, pb_message(pb_varint(2, 15), pb_varint(3, 0)),
+                            error=0, index=0, length_mode=length_mode,
+                        )))
+                        # UpdateGameState hides Quit while isStartPvp=false.
+                        # Explicitly leave the intro before starting ammo; a
+                        # snapshot alone does not refresh that button's state.
+                        delayed_frames.append((intro_delay, encode_frame(
+                            255, 11, pb_message(pb_varint(2, 2), pb_varint(3, 1)),
+                            error=0, index=0, length_mode=length_mode,
+                        )))
+                        delayed_frames.append((0.0,
                             encode_frame(
                                 255,
                                 7,
@@ -3293,7 +3354,7 @@ async def serve_client(
                                 index=0,
                                 length_mode=length_mode,
                             )
-                        )
+                        ))
                         delayed_frames.append(
                             (
                                 PVP_OPENING_SEQUENCE_DELAY,
@@ -3305,7 +3366,7 @@ async def serve_client(
                                         current_pvp_info,
                                         round_number=current_pvp_round,
                                         server_time=server_time
-                                        + int(round(PVP_OPENING_SEQUENCE_DELAY)),
+                                        + int(round(cinema_delay + intro_delay + PVP_OPENING_SEQUENCE_DELAY)),
                                     ),
                                     error=0,
                                     index=0,
@@ -3315,12 +3376,12 @@ async def serve_client(
                         )
                         current_pvp_turn = 0
                         current_pvp_ready_at = (
-                            time.monotonic() + PVP_OPENING_SEQUENCE_DELAY
+                            time.monotonic() + cinema_delay + intro_delay + PVP_OPENING_SEQUENCE_DELAY
                         )
                         LOG.info(
-                            "PVP players loaded snapshot=%d bytes; initial turn queued after %.1fs intro",
+                            "PVP players loaded snapshot=%d bytes; native cinema then participants then ammo; initial turn after %.1fs",
                             len(current_pvp_info),
-                            PVP_OPENING_SEQUENCE_DELAY,
+                            cinema_delay + intro_delay + PVP_OPENING_SEQUENCE_DELAY,
                         )
                     else:
                         LOG.warning("PVP gamer-load arrived before room login")

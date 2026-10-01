@@ -106,6 +106,15 @@ from server import (  # noqa: E402
 
 
 class ProtocolTests(unittest.TestCase):
+    def test_opening_panel_covers_character_specific_camera_return(self) -> None:
+        from server import pvp_opening_cinema_delay
+        with patch('server.PVP_OPENING_SEQUENCE_DELAY', 11.0):
+            for hero, duration in ((17, 6.4), (1, 6.8666668), (0, 8.0)):
+                gamer = pb_bytes(9, pb_varint(1, hero))
+                self.assertAlmostEqual(pvp_opening_cinema_delay(gamer), duration - 0.1)
+        with patch('server.PVP_OPENING_SEQUENCE_DELAY', 0):
+            self.assertEqual(pvp_opening_cinema_delay(pb_bytes(9, pb_varint(1, 17))), 0)
+
     def test_rocket_launcher_draws_one_round_and_live_hit_consumes_all_live(self) -> None:
         gamers = [
             pvp_gamer_with_state(
@@ -1717,8 +1726,28 @@ class ProtocolTests(unittest.TestCase):
                     loaded = await receive(3, 14, 202)
                     loaded_pvp = parse_bytes_field(loaded, 2) or b""
                     self.assertEqual(len(parse_bytes_fields(loaded_pvp, 2)), 3)
+                    self.assertEqual(parse_varint_field(loaded_pvp, 9), 18)
+                    cinema = await receive(255, 18)
+                    self.assertEqual(parse_bytes_field(cinema, 1), b'local-opening')
+                    cinema_started = time.monotonic()
+                    presentation = await receive(255, 16)
+                    # Preloaded panel is queued locally until native TV finish.
+                    intro_pvp = parse_bytes_field(presentation, 1) or b''
+                    self.assertEqual(parse_varint_field(intro_pvp, 9), 15)
+                    self.assertEqual(parse_bytes_fields(intro_pvp, 2),
+                                     parse_bytes_fields(loaded_pvp, 2))
+                    intro_started = time.monotonic()
+                    # Native state notifications leave TV/presentation and
+                    # restore isStartPvp, which controls the Quit button.
+                    phase = await receive(255, 11)
+                    self.assertEqual(parse_varint_field(phase, 2), 15)
+                    phase = await receive(255, 11)
+                    self.assertEqual(parse_varint_field(phase, 2), 2)
+                    self.assertEqual(parse_varint_field(phase, 3), 1)
                     init_ammo = await receive(255, 7)
+                    self.assertGreaterEqual(time.monotonic() - intro_started, 0.07)
                     init_pvp = parse_bytes_field(init_ammo, 1) or b""
+                    self.assertEqual(parse_varint_field(init_pvp, 9), 2)
                     init_gamers = parse_bytes_fields(init_pvp, 2)
                     self.assertEqual(len(init_gamers), 3)
                     init_gun = parse_bytes_field(init_gamers[0], 7) or b""
@@ -1990,7 +2019,10 @@ class ProtocolTests(unittest.TestCase):
                             return pending_head, pending_body
                     async with asyncio.timeout(3):
                         while True:
-                            head, body, _ = await next_frame()
+                            # The pending queue was searched above. Read new
+                            # wire data, otherwise an unrelated intro packet is
+                            # popped/requeued forever without yielding to timeout.
+                            head, body, _ = await read_frame(reader, "body")
                             if (head.cmd, head.act, head.index) == (cmd, act, index):
                                 return head, body
                             pending_frames.append((head, body))
@@ -2058,10 +2090,10 @@ class ProtocolTests(unittest.TestCase):
                     async with asyncio.timeout(4):
                         while len(shoot_sources) < 3 or len(expiries) < 2:
                             head, notification, _ = await next_frame()
-                            result = parse_bytes_field(notification, 1) or b""
-                            event_type = parse_varint_field(result, 1) or 0
                             if (head.cmd, head.act) != (255, 2):
                                 continue
+                            result = parse_bytes_field(notification, 1) or b""
+                            event_type = parse_varint_field(result, 1) or 0
                             event_types.append(event_type)
                             if event_type == 1:
                                 shoot_sources.append(
