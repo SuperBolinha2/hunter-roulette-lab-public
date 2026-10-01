@@ -8,6 +8,8 @@ Mapa de funções: **confirmado / parcial / falta testar / falta implementar**. 
 
 Русский: список функций и их состояния пока на португальском, с оригинальными названиями меню. · Français : liste des fonctions et de leur état, pour l'instant en portugais, avec les noms d'origine. · Español: lista de funciones y estados, por ahora en portugués, con los nombres originales.
 
+Antes de alterar uma função, consulte sua área na checklist e atualize o estado/evidência junto com a mudança. Colaboradores: [CONTRIBUTING](CONTRIBUTING.md). IAs: [AGENTS.md](AGENTS.md), incluindo instruções para não marcar testes pendentes como concluídos.
+
 ## Português
 
 Código do servidor local, testes e descobertas sobre Hunter Roulette. **Não inclui o jogo nem um instalador pronto para jogar.** Git guarda o histórico das mudanças; GitHub guarda a cópia compartilhada na internet.

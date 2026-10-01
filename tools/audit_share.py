@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULES = json.loads((ROOT / 'tools/Modules.json').read_text(encoding='utf-8'))
-ROOT_FILES = {'.gitignore','.gitattributes','README.md','CONTRIBUTING.md','SECURITY.md'}
+ROOT_FILES = {'.gitignore','.gitattributes','README.md','CONTRIBUTING.md','SECURITY.md','AGENTS.md'}
 secret = re.compile(r'(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{30,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)')
 
 
@@ -16,7 +16,7 @@ def allowed(path):
     name = p.name
     if any(part in {'.local','runtime','backups','__pycache__','rollback','Game','RLLaunch','lua-extract','config-extract'} for part in p.parts):
         return False
-    if path in ROOT_FILES or path == '.github/workflows/test.yml':
+    if path in ROOT_FILES or path in {'.github/workflows/test.yml', '.github/PULL_REQUEST_TEMPLATE.md'}:
         return True
     if path == 'server/inventory.example.json' or path in {'server/'+m for m in MODULES}:
         return True

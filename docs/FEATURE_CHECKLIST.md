@@ -14,6 +14,11 @@
 6. Antes de fechar, registre personagem, arma, modo, sequência, resultado e evidência. Um ícone ou uma resposta de sucesso do servidor não bastam para provar o efeito.
 7. Bugs ativos podem ganhar uma Issue, ligada ao ID da linha. Esta página continua sendo o mapa principal; não manter duas listas completas divergentes.
 
+Para quem altera o código: [CONTRIBUTING](../CONTRIBUTING.md).
+Para IAs: [AGENTS.md](../AGENTS.md). O modelo de pull request pede os IDs afetados,
+estado anterior/novo, evidência e testes pendentes. Estas orientações não
+marcam nada automaticamente e não substituem aprovação manual.
+
 O GitHub gera as abas de apresentação para arquivos especiais; não há opção
 documentada para uma aba personalizada de Checklist naquele quadro. Por isso,
 o README tem uma barra de acesso no topo. Não usar SECURITY ou CONTRIBUTING
