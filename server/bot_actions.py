@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 import random
 from typing import Callable
 from weapon_skills import apply_reload_trait
-from hero_skills import bear_conversion, rabbit_power, shelby_trade, SHELBY_SKILLS, annie_convert
+from hero_skills import bear_conversion, rabbit_power, shelby_trade, SHELBY_SKILLS, annie_convert, DIANA_SKILLS, DIANA_BUFFS, VERA_SKILLS, vera_round
 from hero_shop import monkey_convert_shop
 from fair_duel import resolve_fair_duel
 from katie_guard import activate as activate_katie, intercept as intercept_katie, KATIE_BUFFS, KATIE_SKILLS
@@ -158,7 +158,30 @@ class BattleActions:
             exchange_coin = 0
             conversion_cfg = None
             skill_add_buffs = ()
-            if sid in KATIE_SKILLS:
+            stolen_ammo_cfg = None
+            stolen_target_reload = False
+            if sid in VERA_SKILLS:
+                stolen_ammo_cfg = vera_round(self.real[target], self.enhanced[target],
+                    upgraded=sid == 10036, randrange=self.rng.randrange)
+                if stolen_ammo_cfg is None:
+                    return None
+                rounds = self.enhanced if stolen_ammo_cfg == 2 else self.real
+                rounds[target] -= 1
+                rounds[actor] += 1
+                if self.real[target] + self.enhanced[target] == 0:
+                    gun_id = parse_varint_field(parse_bytes_field(self.gamers[target],7) or b'',1) or 0
+                    self.real[target], self.blank[target] = self.reload(gun_id)
+                    m = apply_reload_trait(gun_id, self.real[target], self.blank[target])
+                    self.real[target], self.blank[target], self.enhanced[target] = m.real, m.blank, m.enhanced
+                    self.gamers[target] = pvp_gamer_after_weapon_reload(self.gamers[target])
+                    stolen_target_reload = True
+            elif sid in DIANA_SKILLS:
+                buff = DIANA_BUFFS[DIANA_SKILLS.index(sid)]
+                self.gamers[actor] = pvp_gamer_with_buffs(self.gamers[actor],
+                    add_cfg_ids=(buff,), source_index=actor)
+                skill_add_buffs = tuple(b for b in parse_bytes_fields(self.gamers[actor],8)
+                    if parse_varint_field(b,1) == buff)
+            elif sid in KATIE_SKILLS:
                 self.gamers[actor] = activate_katie(self.gamers[actor],sid,actor,self.katie_guards)
                 skill_add_buffs = tuple(b for b in parse_bytes_fields(self.gamers[actor],8)
                     if parse_varint_field(b,1) in KATIE_BUFFS)
@@ -205,7 +228,7 @@ class BattleActions:
                             self.hp[target], self.frenzy[target], power)
             else:
                 return None
-            skill_cd = 2 if sid in SHELBY_SKILLS else 3
+            skill_cd = 2 if sid in (*SHELBY_SKILLS, *VERA_SKILLS) else 3
             self.gamers[actor] = pvp_gamer_with_skill_cd(self.gamers[actor], skill_cd)
             self.sync()
             packet = pvp_hero_skill_event_result_body(
@@ -214,12 +237,13 @@ class BattleActions:
                 hp_delta=hp_delta, virtual_hp_delta=frenzy_delta,
                 luck_roll=roll, shop_cards=monkey_cards, event_time=event_time,
                 exchange_effect=decision.effect if sid in SHELBY_SKILLS else None,
-                exchange_coin=exchange_coin, conversion_cfg=conversion_cfg, skill_add_buffs=skill_add_buffs)
+                exchange_coin=exchange_coin, conversion_cfg=conversion_cfg, skill_add_buffs=skill_add_buffs,
+                stolen_ammo_cfg=stolen_ammo_cfg, stolen_target_reload=stolen_target_reload)
             packet = pvp_event_with_consumed_lucky(packet, actor, consumed=lucky_consumed,
                                                    event_id=event_id, event_time=event_time)
             packet = pvp_event_with_toxin_removed(packet,actor,toxin_used,
                 event_id=event_id,event_time=event_time)
-            return packet, skill_animation_barrier(sid)
+            return packet, skill_animation_barrier(sid) + (5.0 if stolen_target_reload else 0.0)
         if decision.kind != "item" or decision.offer is None:
             return None
         offer = decision.offer

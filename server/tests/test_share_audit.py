@@ -2,9 +2,15 @@
 
 import unittest
 
-from tools.audit_share import allowed
+try:
+    from tools.audit_share import allowed
+except ModuleNotFoundError as exc:
+    if exc.name not in ('tools', 'tools.audit_share'):
+        raise
+    allowed = None  # The isolated runtime sync contains gameplay, not repo tools.
 
 
+@unittest.skipIf(allowed is None, 'Repository sharing tools are not part of the lab runtime')
 class ContributorGuidancePolicyTests(unittest.TestCase):
     def test_canonical_guidance_and_pr_template_are_allowed(self):
         for path in ("AGENTS.md", ".github/PULL_REQUEST_TEMPLATE.md"):

@@ -123,7 +123,7 @@ LAB_CARD_SKILLS = {
 LAB_HERO_SKILLS = {
     0: (10000, 3, 3), 1: (10001, 3, 3), 13: (10002, 3, 3),
     14: (10005, 3, 3), 15: (10020, 3, 2), 16: (10017, 3, 3),
-    17: (10022, 3, 3), 35: (10032, 3, 3), 36: (10035, 3, 2),
+    17: (10022, 3, 3), 35: (10032, 3, 3), 36: (10035, 2, 2),
     38: (10038, 3, 3),
 }
 
@@ -1939,6 +1939,12 @@ def pvp_gamer_skill_id(gamer: bytes) -> int:
     return parse_varint_field(hero, 2) or 0
 
 
+def pvp_gamer_with_frenzy_cap(gamer: bytes, cap: int) -> bytes:
+    """Replace only the absolute capacity; do not rewrite ammo or other state."""
+    return pb_message(*(raw for number, _, _, raw in _iter_pb_fields(gamer)
+                        if number != 23), pb_varint(23, max(0, cap)))
+
+
 def pvp_gamer_with_state(
     gamer: bytes,
     *,
@@ -2468,6 +2474,8 @@ def pvp_hero_skill_event_result_body(
     exchange_coin: int = 0,
     conversion_cfg: int | None = None,
     skill_add_buffs: tuple[bytes, ...] = (),
+    stolen_ammo_cfg: int | None = None,
+    stolen_target_reload: bool = False,
     event_time: int = LAB_SERVER_TIME,
 ) -> bytes:
     """Hero-skill envelope with a cooldown reset and optional HP/die effect."""
@@ -2480,6 +2488,27 @@ def pvp_hero_skill_event_result_body(
         pb_varint(3, event_id), pb_varint(4, 1),
     )
     events = [cd_event]
+    if stolen_ammo_cfg is not None:
+        # Spider's callbacks buffer pop by victim and add by recipient.
+        events.append(pb_message(
+            pb_bytes(1, _pvp_event_outline(target_index, event_type=13, event_time=event_time)),
+            pb_bytes(2, _pvp_event_outline(target_index, event_type=13,
+                u_ammo=(_ammo_message(stolen_ammo_cfg, 1, _ammo_sort_id(stolen_ammo_cfg)),),
+                event_time=event_time)), pb_varint(3, event_id), pb_varint(4, len(events)+1)))
+        events.append(pb_message(
+            pb_bytes(1, _pvp_event_outline(actor_index, event_type=77, event_time=event_time)),
+            pb_bytes(2, _pvp_event_outline(actor_index, event_type=77,
+                include_ammo=True, ammo_cfg_id=stolen_ammo_cfg, ammo_num=1,
+                r_ammo=parse_bytes_fields(parse_bytes_field(source, 7) or b'', 2),
+                event_time=event_time)), pb_varint(3, event_id), pb_varint(4, len(events)+1)))
+        if stolen_target_reload:
+            events.append(pb_message(
+                pb_bytes(1, _pvp_event_outline(target_index, event_type=1, event_time=event_time)),
+                pb_bytes(2, _pvp_event_outline(target_index, event_type=1, is_reload=True,
+                    r_ammo=parse_bytes_fields(parse_bytes_field(target, 7) or b'', 2),
+                    is_gun_buff=_weapon_trait_activated(target), add_buffs=_reload_weapon_buffs(target),
+                    event_time=event_time)), pb_varint(3, event_id), pb_varint(4, len(events)+1)))
+            _append_reload_weapon_buff_event(events, target, event_id=event_id, event_time=event_time)
     if skill_add_buffs:
         events.append(pb_message(
             pb_bytes(1, _pvp_event_outline(target_index,event_type=10,event_time=event_time)),
@@ -3298,6 +3327,7 @@ def _pvp_event_outline(
     hp_cap_delta: int = 0,
     virtual_hp_delta: int = 0,
     *,
+    virtual_hp_cap_delta: int = 0,
     coin_delta: int | None = None,
     coin_reason: int = 5,
     include_ammo: bool = False,
@@ -3332,6 +3362,8 @@ def _pvp_event_outline(
         fields.append(pb_varint(7, hp_cap_delta))
     if virtual_hp_delta:
         fields.append(pb_varint(14, virtual_hp_delta))
+    if virtual_hp_cap_delta:
+        fields.append(pb_varint(19, virtual_hp_cap_delta))
     if continue_shoot is not None:
         next_coin, coin, state, bonus = continue_shoot
         fields.extend((pb_varint(15, next_coin), pb_varint(16, coin),
@@ -3426,6 +3458,8 @@ def pvp_shoot_event_result_body(
     self_virtual_hp_delta: int = 0,
     target_virtual_hp_delta: int = 0,
     additional_virtual_hp_deltas: tuple[int, ...] = (),
+    target_virtual_hp_cap_delta: int = 0,
+    additional_virtual_hp_cap_deltas: tuple[int, ...] = (),
     source_virtual_hp_delta: int = 0,
     additional_source_virtual_hp_deltas: tuple[int, ...] = (),
     source_dead_after_shots: tuple[bool, ...] = (),
@@ -3507,6 +3541,9 @@ def pvp_shoot_event_result_body(
             ammo_num,
             hp_delta=shot_delta,
             virtual_hp_delta=shot_virtual_delta,
+            virtual_hp_cap_delta=(target_virtual_hp_cap_delta if shot_number == 0
+                else additional_virtual_hp_cap_deltas[shot_number - 1]
+                if shot_number - 1 < len(additional_virtual_hp_cap_deltas) else 0),
             coin_delta=(target_coin_delta if is_last and target_coin_delta else None),
             coin_reason=coin_reason,
             is_play_hit_anim=shot_delta < 0 or shot_virtual_delta < 0,

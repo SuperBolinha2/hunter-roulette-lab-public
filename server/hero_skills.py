@@ -8,6 +8,37 @@ MONKEY_UPGRADE = 10013
 ARTHUR_BASE = 10005
 ARTHUR_UPGRADE = 10014
 SHELBY_SKILLS = (10020, 10021, 10024, 10025, 10026, 10027)
+DIANA_SKILLS = (10032, 10033)
+DIANA_BUFFS = (10051, 10052)
+VERA_SKILLS = (10035, 10036)
+
+
+def vera_round(real: int, enhanced: int, *, upgraded: bool, randrange) -> int | None:
+    """Choose one eligible round, weighted by count in basic / red first in +.
+
+    Execution ammo is not emitted by the current supported trio state model.
+    """
+    if min(real, enhanced) < 0 or real + enhanced == 0:
+        return None
+    if upgraded:
+        return 2 if enhanced else 1
+    return 1 if randrange(real + enhanced) < real else 2
+
+
+def diana_hit(frenzy: int, cap: int, *, upgraded: bool, eligible: bool):
+    """Native logic 65: an ordinary damaging enemy shot removes 1 Frenzy.
+
+    Player-validated upgrade interpretation: consume one point and remove
+    another point with its capacity. Losing a slot must not preserve its point.
+    This is additional to ordinary damage, not an extra bullet or HP damage.
+    """
+    if not eligible:
+        return frenzy, cap, 0, 0
+    removed_slot = int(upgraded and cap > 0)
+    remaining = max(0, frenzy - 1 - removed_slot)
+    new_cap = max(0, cap - int(upgraded))
+    remaining = min(remaining, new_cap)
+    return remaining, new_cap, remaining - frenzy, new_cap - cap
 
 
 def effective_hero_skill(entry: dict) -> int:
@@ -15,7 +46,8 @@ def effective_hero_skill(entry: dict) -> int:
     hero = int(entry.get('id', -1))
     pairs = {0: (RABBIT_BASE, RABBIT_UPGRADE), 1: (BEAR_BASE, BEAR_UPGRADE),
              13: (MONKEY_BASE, MONKEY_UPGRADE), 14: (ARTHUR_BASE, ARTHUR_UPGRADE),
-             15: (10020, 10021), 16: (10017, 10018), 17: (10022, 10023)}
+             15: (10020, 10021), 16: (10017, 10018), 17: (10022, 10023),
+             35: DIANA_SKILLS, 36: VERA_SKILLS}
     if hero in pairs:
         base, upgrade = pairs[hero]
         unlocked = (int(entry.get('starLevel', 0)) >= 5

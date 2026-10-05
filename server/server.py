@@ -6,7 +6,8 @@ original service, Steam authentication, or any third-party endpoint.
 
 from __future__ import annotations
 
-from hero_skills import effective_hero_skill, bear_conversion, rabbit_power, battle_hero_skill, shelby_trade, SHELBY_SKILLS, annie_convert
+from hero_skills import effective_hero_skill, bear_conversion, rabbit_power, battle_hero_skill, shelby_trade, SHELBY_SKILLS, annie_convert, DIANA_SKILLS, DIANA_BUFFS, diana_hit, VERA_SKILLS, vera_round
+from protocol import pvp_gamer_with_frenzy_cap
 from hero_shop import monkey_candidates, monkey_convert_shop
 from fair_duel import resolve_fair_duel
 from katie_guard import (KATIE_SKILLS, KATIE_BUFFS, activate as activate_katie,
@@ -31,7 +32,7 @@ from bot_ai import (
     DIFFICULTIES, ITEM_BUFF_CFG, choose_action,
     tranquilizer_frenzy_reduction,
 )
-from bot_presentation import ACTION_DECISION_PAUSE
+from bot_presentation import ACTION_DECISION_PAUSE, skill_animation_barrier
 from bot_actions import BattleActions, TurnRestrictions, has_buff
 from weapon_skills import apply_reload_trait, weapon_skill_id, prioritize_shot_ammo, normal_shot_count, carnivore_reward, self_shot_reward_multiplier
 
@@ -2013,6 +2014,32 @@ def _pvp_virtual_hp_cap(gamer: bytes, default: int = 2) -> int:
     return max(0, int(default if value is None else value))
 
 
+def _pvp_diana_after_normal_shot(gamers, frenzy, source, target, cfg, hp_delta, frenzy_delta):
+    """Native trigger 29, only called by ordinary shot executors, before death."""
+    active = next((buff for buff in reversed(DIANA_BUFFS) if has_buff(gamers[source], buff)), None)
+    eligible = active is not None and source != target and cfg in (1, 2) and hp_delta + frenzy_delta < 0
+    remaining, cap, delta, cap_delta = diana_hit(frenzy[target],
+        _pvp_virtual_hp_cap(gamers[target]), upgraded=active == DIANA_BUFFS[1], eligible=eligible)
+    frenzy[target] = remaining
+    if cap_delta:
+        gamers[target] = pvp_gamer_with_frenzy_cap(gamers[target], cap)
+    if delta or cap_delta:
+        LOG.info("PVP Diana hit actor=%d target=%d frenzy_delta=%d cap_delta=%d cap=%d",
+                 source, target, delta, cap_delta, cap)
+    return delta, cap_delta
+
+
+def _pvp_expire_diana_turn(gamers):
+    """Called once on actor transition, never on a self-blank continuation."""
+    expired = []
+    for index, gamer in enumerate(gamers):
+        buffs = tuple(buff for buff in DIANA_BUFFS if has_buff(gamer, buff))
+        if buffs:
+            gamers[index] = pvp_gamer_with_buffs(gamer, del_cfg_ids=buffs)
+            expired.append((index, buffs))
+    return expired
+
+
 def _pvp_frenzy_after_shot(
     current: int,
     cap: int,
@@ -3490,6 +3517,7 @@ async def serve_client(
                             )
                             player_shots: list[tuple[int, int, int, int, bool]] = []
                             player_virtual_hp_deltas: list[int] = []
+                            player_virtual_hp_cap_deltas: list[int] = []
                             player_source_virtual_hp_deltas: list[int] = []
                             player_ghosts_added: list[int] = []
                             player_source_dead_after_shots: list[bool] = []
@@ -3544,6 +3572,11 @@ async def serve_client(
                                 if shot_cfg == 300:
                                     target_hp_delta = 0
                                     target_virtual_hp_delta = 0
+                                diana_delta, diana_cap_delta = _pvp_diana_after_normal_shot(
+                                    gamers, virtual_hit_points, 0, target_index, shot_cfg,
+                                    target_hp_delta, target_virtual_hp_delta)
+                                target_virtual_hp_delta += diana_delta
+                                player_virtual_hp_cap_deltas.append(diana_cap_delta)
                                 if target_index == 0:
                                     source_virtual_hp_delta = 0
                                 else:
@@ -3838,6 +3871,16 @@ async def serve_client(
                                 # for each bullet, item, reload or animation.
                                 current_pvp_wanted_turn_clock += 1
                                 bot_preparations[actor_index] = 0
+                                for expired_actor, expired_buffs in _pvp_expire_diana_turn(gamers):
+                                    current_pvp_event_id += 1
+                                    queue_trio_frame(0, 255, 2,
+                                        pvp_event_notification_body(
+                                            pvp_passive_buff_removal_event_result_body(
+                                                gamers[expired_actor], target_index=expired_actor,
+                                                cfg_ids=expired_buffs, event_id=current_pvp_event_id,
+                                                event_time=server_time + int(round(timeline_elapsed))),
+                                            trio_snapshot(round_number, actor_index),
+                                            server_time=server_time + int(round(timeline_elapsed))))
                                 expired_bans = current_pvp_restrictions.start(actor_index)
                                 if expired_bans:
                                     gamers[actor_index] = pvp_gamer_with_buffs(
@@ -4151,6 +4194,8 @@ async def serve_client(
                                 ammo_cfg_id=first_shot_cfg,
                                 target_hp_delta=first_shot_delta,
                                 target_virtual_hp_delta=player_virtual_hp_deltas[0],
+                                target_virtual_hp_cap_delta=player_virtual_hp_cap_deltas[0],
+                                additional_virtual_hp_cap_deltas=tuple(player_virtual_hp_cap_deltas[1:]),
                                 additional_virtual_hp_deltas=tuple(
                                     player_virtual_hp_deltas[1:]
                                 ),
@@ -4680,6 +4725,7 @@ async def serve_client(
                                             bot_bucket_consumed = False
                                             bot_katie_consumed = []
                                             bot_virtual_hp_deltas: list[int] = []
+                                            bot_virtual_hp_cap_deltas: list[int] = []
                                             bot_source_virtual_hp_deltas: list[int] = []
                                             bot_ghosts_added: list[int] = []
                                             bot_source_dead_after_shots: list[bool] = []
@@ -4732,6 +4778,11 @@ async def serve_client(
                                                         virtual_hit_points[bot_target],
                                                         shot_damage,
                                                     )
+                                                diana_delta, diana_cap_delta = _pvp_diana_after_normal_shot(
+                                                    gamers, virtual_hit_points, actor_index, bot_target,
+                                                    bot_ammo_cfg, target_hp_delta, target_virtual_hp_delta)
+                                                target_virtual_hp_delta += diana_delta
+                                                bot_virtual_hp_cap_deltas.append(diana_cap_delta)
                                                 (
                                                     virtual_hit_points[actor_index],
                                                     source_virtual_hp_delta,
@@ -4959,6 +5010,8 @@ async def serve_client(
                                                 ammo_cfg_id=first_bot_cfg,
                                                 target_hp_delta=first_bot_delta,
                                                 target_virtual_hp_delta=bot_virtual_hp_deltas[0],
+                                                target_virtual_hp_cap_delta=bot_virtual_hp_cap_deltas[0],
+                                                additional_virtual_hp_cap_deltas=tuple(bot_virtual_hp_cap_deltas[1:]),
                                                 additional_virtual_hp_deltas=tuple(
                                                     bot_virtual_hp_deltas[1:]
                                                 ),
@@ -6225,11 +6278,21 @@ async def serve_client(
                         and pvp_gamer_skill_cd(current_pvp_player) == 0
                         and not has_buff(current_pvp_player, ITEM_BUFF_CFG[2030])
                         and not _pvp_is_eliminated(hit_points[0], virtual_hit_points[0])
-                        and skill_id in (10000, 10003, 10001, 10004, 10002, 10013, 10005, 10014, 10017, 10018, *SHELBY_SKILLS, *KATIE_SKILLS)
+                        and skill_id in (10000, 10003, 10001, 10004, 10002, 10013, 10005, 10014, 10017, 10018, *SHELBY_SKILLS, *KATIE_SKILLS, *DIANA_SKILLS, *VERA_SKILLS)
+                        and (skill_id not in DIANA_SKILLS or (requested_target == 0
+                            and requested_mode == 1 and requested_sub_mode == 6
+                            and not any(has_buff(gamers[0], buff) for buff in DIANA_BUFFS)))
                         and (skill_id not in KATIE_SKILLS or (requested_target == 0 and 0 not in current_pvp_katie_guards and requested_mode == 1 and requested_sub_mode == 6))
                         and (skill_id not in SHELBY_SKILLS or (requested_target == 0 and exchange_trade is not None))
                         and requested_target is not None
                         and 0 <= requested_target < len(gamers)
+                        and (skill_id not in VERA_SKILLS or (
+                            requested_mode == 1 and requested_sub_mode == 6 and requested_target != 0
+                            and pvp_gamer_has_ammo_space(gamers[0], current_pvp_player_ammo,
+                                current_pvp_player_fake_ammo, current_pvp_damage_bonus[0])
+                            and [current_pvp_player_ammo, current_pvp_bot_ammo,
+                                 current_pvp_extra_bot_ammo][requested_target]
+                                + current_pvp_damage_bonus[requested_target] > 0))
                         and (skill_id not in (10017, 10018) or
                             [current_pvp_player_fake_ammo, current_pvp_bot_fake_ammo, current_pvp_extra_bot_fake_ammo][requested_target] > 0)
                         and not _pvp_is_eliminated(
@@ -6255,7 +6318,39 @@ async def serve_client(
                         exchange_coin = 0
                         conversion_cfg = None
                         skill_add_buffs = ()
-                        if skill_id in KATIE_SKILLS:
+                        stolen_ammo_cfg = None
+                        stolen_target_reload = False
+                        if skill_id in VERA_SKILLS:
+                            real_ammo = [current_pvp_player_ammo, current_pvp_bot_ammo, current_pvp_extra_bot_ammo]
+                            fake_ammo = [current_pvp_player_fake_ammo, current_pvp_bot_fake_ammo, current_pvp_extra_bot_fake_ammo]
+                            stolen_ammo_cfg = vera_round(real_ammo[target_index], current_pvp_damage_bonus[target_index],
+                                upgraded=skill_id == 10036, randrange=random.randrange)
+                            rounds = current_pvp_damage_bonus if stolen_ammo_cfg == 2 else real_ammo
+                            rounds[target_index] -= 1
+                            rounds[0] += 1
+                            if real_ammo[target_index] + current_pvp_damage_bonus[target_index] == 0:
+                                gun_id = parse_varint_field(parse_bytes_field(gamers[target_index],7) or b'',1) or 0
+                                real_ammo[target_index], fake_ammo[target_index] = _reload_weapon_ammo(
+                                    gun_id, current_pvp_damage_bonus, target_index, randomize=state.randomize_magazines)
+                                gamers[target_index] = pvp_gamer_after_weapon_reload(gamers[target_index])
+                                stolen_target_reload = True
+                            current_pvp_player_ammo, current_pvp_bot_ammo, current_pvp_extra_bot_ammo = real_ammo
+                            current_pvp_player_fake_ammo, current_pvp_bot_fake_ammo, current_pvp_extra_bot_fake_ammo = fake_ammo
+                            gamers[0] = pvp_gamer_with_state(gamers[0], hp=hit_points[0], virtual_hp=virtual_hit_points[0],
+                                ammo_number=real_ammo[0], fake_ammo_number=fake_ammo[0],
+                                enhanced_ammo_number=current_pvp_damage_bonus[0], round_number=current_pvp_round)
+                            current_pvp_ready_at = time.monotonic() + skill_animation_barrier(skill_id) + (5.0 if stolen_target_reload else 0.0)
+                            LOG.info("PVP Vera actor=0 target=%d skill=%d stolen_cfg=%d real=%s blank=%s red=%s reload=%s",
+                                target_index, skill_id, stolen_ammo_cfg, real_ammo, fake_ammo,
+                                current_pvp_damage_bonus, stolen_target_reload)
+                        elif skill_id in DIANA_SKILLS:
+                            buff = DIANA_BUFFS[DIANA_SKILLS.index(skill_id)]
+                            gamers[0] = pvp_gamer_with_buffs(gamers[0], add_cfg_ids=(buff,), source_index=0)
+                            skill_add_buffs = tuple(b for b in parse_bytes_fields(gamers[0],8)
+                                if parse_varint_field(b,1) == buff)
+                            current_pvp_ready_at = time.monotonic() + skill_animation_barrier(skill_id)
+                            LOG.info("PVP Diana activated actor=0 skill=%d buff=%d", skill_id, buff)
+                        elif skill_id in KATIE_SKILLS:
                             gamers[0] = activate_katie(gamers[0],skill_id,0,current_pvp_katie_guards)
                             skill_add_buffs = tuple(b for b in parse_bytes_fields(gamers[0],8) if parse_varint_field(b,1) in KATIE_BUFFS)
                             current_pvp_ready_at = time.monotonic() + 8.0
@@ -6339,7 +6434,7 @@ async def serve_client(
                                     virtual_hit_points[target_index],
                                     power,
                                 )
-                        skill_reset_cd = 2 if skill_id in SHELBY_SKILLS else 3
+                        skill_reset_cd = 2 if skill_id in (*SHELBY_SKILLS, *VERA_SKILLS) else 3
                         if duel_result is None:
                             gamers[0] = pvp_gamer_with_skill_cd(gamers[0], skill_reset_cd)
                         gamers[target_index] = pvp_gamer_with_state(
@@ -6402,6 +6497,8 @@ async def serve_client(
                             exchange_coin=exchange_coin,
                             conversion_cfg=conversion_cfg,
                             skill_add_buffs=skill_add_buffs,
+                            stolen_ammo_cfg=stolen_ammo_cfg,
+                            stolen_target_reload=stolen_target_reload,
                             event_id=current_pvp_event_id,
                             event_time=server_time,
                         )

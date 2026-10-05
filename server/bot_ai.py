@@ -245,6 +245,15 @@ def candidates(obs: Observation, difficulty: str = "medium") -> tuple[Decision, 
                 choices.append(Decision("skill", actor.index, 2.8, "replace own blank with live/enhanced round"))
             elif actor.skill_id in (10022,10023,10030,10031) and not actor.buffs.intersection((10029,10031,10047,10049)):
                 choices.append(Decision("skill",actor.index,3.0,"protect from next enemy shot"))
+            elif actor.skill_id in (10032,10033) and not actor.buffs.intersection((10051,10052)):
+                if actor.real + actor.enhanced > 0 and any(
+                    f.alive and f.index != actor.index and f.frenzy > 0 for f in obs.fighters):
+                    choices.append(Decision("skill",actor.index,3.2,"ordinary hits remove enemy Frenzy this turn"))
+            elif actor.skill_id in (10035,10036) and actor.real + actor.blank + actor.enhanced < actor.capacity:
+                for target in obs.fighters:
+                    if target.alive and target.index != actor.index and target.real + target.enhanced > 0:
+                        choices.append(Decision("skill",target.index,3.4 + .4 * bool(target.enhanced),
+                                                "steal enemy live round into free magazine slot"))
         for offer in obs.offers:
             rule = ITEM_RULES.get(offer.cfg)
             if rule is None or not rule.enabled:

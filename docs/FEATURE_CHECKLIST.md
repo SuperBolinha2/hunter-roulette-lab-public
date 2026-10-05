@@ -158,15 +158,15 @@ A árvore abaixo segue os prints atuais: perfil e Base no alto; Clan/Friend/Back
 
 ### Leoa — Diana / Tribal Lioness - Diana
 
-- [ ] [AUDITAR] `HERO-DIANA-01` Skill básica `10032` e melhorada `10033` no contexto local: Não fechar executor básico/melhorado apenas por catálogo ou animação.
-- [ ] [TESTAR] `HERO-DIANA-02` Reconstruir contrato, efeito, duração, animação e testar os dois níveis.
+- [x] [CONFIRMADO] `HERO-DIANA-01` Melhoria `10033` no contexto local de três participantes com loja (`mode=1/sub=6`): jogador confirmou em 2026-10-05; log e snapshot mostram alvo `HP 4 → 3`, `Frenzy 2/2 → 0/1`, com deltas de pontos `-2` e limite `-1`. Escopo desta confirmação é o tiro real com melhoria; não encerra a básica nem todos os casos visuais. [Contrato e roteiro](DIANA_SKILL_TEST.md).
+- [ ] [PARCIAL] `HERO-DIANA-02` Básica `10032`, rajada, falsa em si, bloqueio e expiração passam em testes automáticos; reteste manual destes casos e avaliação específica de câmera/som ainda pendentes. Contrato nativo `10051/10052`, lógica 65, gatilho 29, animação 47. Outros modos não habilitados por esta alteração.
 - [ ] [AUDITAR] `HERO-DIANA-03` Aparência, história, emblemas, recompensas e seleção/equipamento específicos deste personagem.
 - [ ] [FAZER] `HERO-DIANA-04` Aquisição natural e desbloqueio da melhoria sem privilégios GM, conforme regra de progressão validada.
 
 ### Aranha — Vera / Merc Spider - Vera
 
-- [ ] [AUDITAR] `HERO-VERA-01` Skill básica `10035` e melhorada `10036` no contexto local: Não fechar executor básico/melhorado apenas por catálogo ou animação.
-- [ ] [TESTAR] `HERO-VERA-02` Reconstruir contrato, efeito, duração, animação e testar os dois níveis.
+- [x] [CONFIRMADO] `HERO-VERA-01` Melhoria `10036`, trio local com loja: jogador aprovou em 2026-10-05; Bot 1 perdeu 1 reforçada/cfg2 e Vera recebeu a mesma, sem alterar as outras munições. Básica, roubo da última real e munição de execução ficam como pendências em `HERO-VERA-02`. [Roteiro e limites](VERA_SKILL_RESEARCH.md).
+- [ ] [PARCIAL] `HERO-VERA-02` Básica e demais limites passam em testes automáticos; eventos nativos `13/77` confirmados no roubo manual da reforçada. Falta testar manualmente básica, recarga da última real, bloqueio de arma cheia e detalhar câmera/som. Execução/cfg3 não emitida pelo trio atual e não implementada. Proteção de capacidade ainda sem confirmação da regra original.
 - [ ] [AUDITAR] `HERO-VERA-03` Aparência, história, emblemas, recompensas e seleção/equipamento específicos deste personagem.
 - [ ] [FAZER] `HERO-VERA-04` Aquisição natural e desbloqueio da melhoria sem privilégios GM, conforme regra de progressão validada.
 
