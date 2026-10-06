@@ -14,6 +14,7 @@ from hero_skills import bear_conversion, rabbit_power, shelby_trade, SHELBY_SKIL
 from hero_shop import monkey_convert_shop
 from fair_duel import resolve_fair_duel
 from katie_guard import activate as activate_katie, intercept as intercept_katie, KATIE_BUFFS, KATIE_SKILLS
+from hero_drone import resolve_drone
 
 from bot_ai import (Decision, Fighter, ITEM_RULES, ITEM_BUFF_CFG, Observation,
                     Offer, candidates, tranquilizer_frenzy_reduction)
@@ -140,6 +141,13 @@ class BattleActions:
         target = decision.target
         if decision.kind == "skill":
             sid = pvp_gamer_skill_id(self.gamers[actor])
+            if sid in (10038, 10039):
+                result = resolve_drone(self.gamers, self.hp, self.frenzy, self.real,
+                    self.blank, self.enhanced, actor=actor, upgraded=sid == 10039,
+                    rng=self.rng, damage=self.damage, round_number=self.round_number,
+                    event_id=event_id, event_time=event_time,
+                    randomize_magazines=self.randomize_magazines, katie_guards=self.katie_guards)
+                return result.packet, result.wait
             if sid in (10005, 10014):
                 def duel_draw(r, b, e):
                     n = self.rng.randrange(r + b + e)

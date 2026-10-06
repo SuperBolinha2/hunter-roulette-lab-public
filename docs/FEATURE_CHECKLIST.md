@@ -172,8 +172,8 @@ A árvore abaixo segue os prints atuais: perfil e Base no alto; Clan/Friend/Back
 
 ### Águia — Hawke / War Eagle - Hawke
 
-- [ ] [AUDITAR] `HERO-HAWKE-01` Skill básica `10038` e melhorada `10039` no contexto local: Não fechar executor básico/melhorado apenas por catálogo ou animação.
-- [ ] [TESTAR] `HERO-HAWKE-02` Reconstruir contrato, efeito, duração, animação e testar os dois níveis.
+- [x] [CONFIRMADO] `HERO-HAWKE-01` Julgamento Aéreo+ `10039`, trio local com loja: jogador aprovou em 2026-10-05 e aceitou ausência de seleção manual de alvo. Snapshot confirma 4 reais → 2, falsas intactas, 2 impactos no Bot 1 (HP 4 → 2). Básica e casos adicionais permanecem em `HERO-HAWKE-02`. [Contrato e roteiro](HAWKE_SKILL_TEST.md).
+- [ ] [PARCIAL] `HERO-HAWKE-02` Contrato nativo type14, eventos `86/87`, cutscene29 e câmera Eagle. Testes dos dois níveis e vitória por eliminação passam; falta validação manual da básica, arredondamento ímpar, robô e recarga da última real, além de avaliação específica de som/câmera. Execução/cfg3 e outros modos fora do escopo atual.
 - [ ] [AUDITAR] `HERO-HAWKE-03` Aparência, história, emblemas, recompensas e seleção/equipamento específicos deste personagem.
 - [ ] [FAZER] `HERO-HAWKE-04` Aquisição natural e desbloqueio da melhoria sem privilégios GM, conforme regra de progressão validada.
 

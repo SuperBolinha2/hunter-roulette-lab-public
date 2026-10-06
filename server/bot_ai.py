@@ -254,6 +254,12 @@ def candidates(obs: Observation, difficulty: str = "medium") -> tuple[Decision, 
                     if target.alive and target.index != actor.index and target.real + target.enhanced > 0:
                         choices.append(Decision("skill",target.index,3.4 + .4 * bool(target.enhanced),
                                                 "steal enemy live round into free magazine slot"))
+            elif actor.skill_id in (10038,10039):
+                from hero_skills import hawke_load_count
+                loaded = hawke_load_count(actor.real, actor.enhanced, upgraded=actor.skill_id == 10039)
+                if loaded and any(f.alive and f.index != actor.index for f in obs.fighters):
+                    choices.append(Decision("skill", actor.index, 3.0 + .5 * loaded,
+                                            "load half live magazine into drone; random enemy hits"))
         for offer in obs.offers:
             rule = ITEM_RULES.get(offer.cfg)
             if rule is None or not rule.enabled:

@@ -6,10 +6,11 @@ original service, Steam authentication, or any third-party endpoint.
 
 from __future__ import annotations
 
-from hero_skills import effective_hero_skill, bear_conversion, rabbit_power, battle_hero_skill, shelby_trade, SHELBY_SKILLS, annie_convert, DIANA_SKILLS, DIANA_BUFFS, diana_hit, VERA_SKILLS, vera_round
+from hero_skills import effective_hero_skill, bear_conversion, rabbit_power, battle_hero_skill, shelby_trade, SHELBY_SKILLS, annie_convert, DIANA_SKILLS, DIANA_BUFFS, diana_hit, VERA_SKILLS, vera_round, HAWKE_SKILLS, hawke_load_count
 from protocol import pvp_gamer_with_frenzy_cap
 from hero_shop import monkey_candidates, monkey_convert_shop
 from fair_duel import resolve_fair_duel
+from hero_drone import resolve_drone
 from katie_guard import (KATIE_SKILLS, KATIE_BUFFS, activate as activate_katie,
     intercept as intercept_katie, expire as expire_katie, expiry_packet as katie_expiry_packet)
 
@@ -6278,7 +6279,11 @@ async def serve_client(
                         and pvp_gamer_skill_cd(current_pvp_player) == 0
                         and not has_buff(current_pvp_player, ITEM_BUFF_CFG[2030])
                         and not _pvp_is_eliminated(hit_points[0], virtual_hit_points[0])
-                        and skill_id in (10000, 10003, 10001, 10004, 10002, 10013, 10005, 10014, 10017, 10018, *SHELBY_SKILLS, *KATIE_SKILLS, *DIANA_SKILLS, *VERA_SKILLS)
+                        and skill_id in (10000, 10003, 10001, 10004, 10002, 10013, 10005, 10014, 10017, 10018, *SHELBY_SKILLS, *KATIE_SKILLS, *DIANA_SKILLS, *VERA_SKILLS, *HAWKE_SKILLS)
+                        and (skill_id not in HAWKE_SKILLS or (requested_mode == 1 and requested_sub_mode == 6
+                            and hawke_load_count(current_pvp_player_ammo, current_pvp_damage_bonus[0],
+                                upgraded=skill_id == 10039) > 0
+                            and any(hit_points[i] + virtual_hit_points[i] > 0 for i in range(1, len(gamers)))))
                         and (skill_id not in DIANA_SKILLS or (requested_target == 0
                             and requested_mode == 1 and requested_sub_mode == 6
                             and not any(has_buff(gamers[0], buff) for buff in DIANA_BUFFS)))
@@ -6314,13 +6319,28 @@ async def serve_client(
                         virtual_hp_delta = 0
                         toxin_used = False
                         monkey_cards = None
-                        duel_result = None
+                        multi_actor_result = None
                         exchange_coin = 0
                         conversion_cfg = None
                         skill_add_buffs = ()
                         stolen_ammo_cfg = None
                         stolen_target_reload = False
-                        if skill_id in VERA_SKILLS:
+                        if skill_id in HAWKE_SKILLS:
+                            real_ammo = [current_pvp_player_ammo, current_pvp_bot_ammo, current_pvp_extra_bot_ammo][:len(gamers)]
+                            fake_ammo = [current_pvp_player_fake_ammo, current_pvp_bot_fake_ammo, current_pvp_extra_bot_fake_ammo][:len(gamers)]
+                            multi_actor_result = resolve_drone(gamers, hit_points, virtual_hit_points,
+                                real_ammo, fake_ammo, current_pvp_damage_bonus, actor=0,
+                                upgraded=skill_id == 10039, rng=random, damage=_pvp_apply_hp_damage,
+                                round_number=current_pvp_round, event_id=current_pvp_event_id + 1,
+                                event_time=server_time, randomize_magazines=state.randomize_magazines,
+                                katie_guards=current_pvp_katie_guards)
+                            current_pvp_player_ammo, current_pvp_bot_ammo, current_pvp_extra_bot_ammo = real_ammo
+                            current_pvp_player_fake_ammo, current_pvp_bot_fake_ammo, current_pvp_extra_bot_fake_ammo = fake_ammo
+                            current_pvp_ready_at = time.monotonic() + multi_actor_result.wait
+                            LOG.info("PVP Hawke skill=%d consumed=%s hits=%s hp=%s frenzy=%s real=%s red=%s wait=%.2f",
+                                skill_id, multi_actor_result.consumed, multi_actor_result.hits, hit_points,
+                                virtual_hit_points, real_ammo, current_pvp_damage_bonus, multi_actor_result.wait)
+                        elif skill_id in VERA_SKILLS:
                             real_ammo = [current_pvp_player_ammo, current_pvp_bot_ammo, current_pvp_extra_bot_ammo]
                             fake_ammo = [current_pvp_player_fake_ammo, current_pvp_bot_fake_ammo, current_pvp_extra_bot_fake_ammo]
                             stolen_ammo_cfg = vera_round(real_ammo[target_index], current_pvp_damage_bonus[target_index],
@@ -6381,7 +6401,7 @@ async def serve_client(
                             if current_pvp_extra_bot:
                                 real_ammo.append(current_pvp_extra_bot_ammo)
                                 fake_ammo.append(current_pvp_extra_bot_fake_ammo)
-                            duel_result = resolve_fair_duel(gamers, hit_points, virtual_hit_points,
+                            multi_actor_result = resolve_fair_duel(gamers, hit_points, virtual_hit_points,
                                 real_ammo, fake_ammo, current_pvp_damage_bonus,
                                 actor=0, target=target_index, upgraded=skill_id == 10014,
                                 draw=_draw_loaded_ammo, damage=_pvp_apply_hp_damage,
@@ -6393,10 +6413,10 @@ async def serve_client(
                             if len(gamers) > 2:
                                 current_pvp_extra_bot_ammo = real_ammo[2]
                                 current_pvp_extra_bot_fake_ammo = fake_ammo[2]
-                            current_pvp_ready_at = time.monotonic() + duel_result.wait
+                            current_pvp_ready_at = time.monotonic() + multi_actor_result.wait
                             LOG.info("PVP Fair Duel skill=%d target=%d shots=%s hp=%s frenzy=%s real=%s blank=%s red=%s wait=%.2f",
-                                skill_id, target_index, duel_result.shots, hit_points, virtual_hit_points,
-                                real_ammo, fake_ammo, current_pvp_damage_bonus, duel_result.wait)
+                                skill_id, target_index, multi_actor_result.shots, hit_points, virtual_hit_points,
+                                real_ammo, fake_ammo, current_pvp_damage_bonus, multi_actor_result.wait)
                         elif skill_id in (10002, 10013):
                             monkey_cards, current_pvp_shop_next_id, converted = monkey_convert_shop(
                                 parse_bytes_fields(current_pvp_info, 7),
@@ -6435,7 +6455,7 @@ async def serve_client(
                                     power,
                                 )
                         skill_reset_cd = 2 if skill_id in (*SHELBY_SKILLS, *VERA_SKILLS) else 3
-                        if duel_result is None:
+                        if multi_actor_result is None:
                             gamers[0] = pvp_gamer_with_skill_cd(gamers[0], skill_reset_cd)
                         gamers[target_index] = pvp_gamer_with_state(
                             gamers[target_index],
@@ -6502,8 +6522,8 @@ async def serve_client(
                             event_id=current_pvp_event_id,
                             event_time=server_time,
                         )
-                        if duel_result is not None:
-                            event = duel_result.packet
+                        if multi_actor_result is not None:
+                            event = multi_actor_result.packet
                         event = pvp_event_with_consumed_lucky(event, 0, consumed=lucky_consumed,
                             event_id=current_pvp_event_id, event_time=server_time)
                         event = pvp_event_with_toxin_removed(event,0,toxin_used,
@@ -6515,14 +6535,14 @@ async def serve_client(
                             ),
                             error=0, index=0, length_mode=length_mode,
                         ))
-                        if duel_result is not None:
+                        if multi_actor_result is not None:
                             for index in range(len(gamers)):
                                 if _pvp_is_eliminated(hit_points[index], virtual_hit_points[index]) and index not in current_pvp_eliminated_order:
                                     current_pvp_eliminated_order.append(index)
                             survivors = [i for i in range(len(gamers)) if not _pvp_is_eliminated(hit_points[i], virtual_hit_points[i])]
                             if _pvp_is_eliminated(hit_points[0], virtual_hit_points[0]):
                                 current_pvp_turn = -1
-                                delayed_frames.append((duel_result.wait, encode_frame(255, 15,
+                                delayed_frames.append((multi_actor_result.wait, encode_frame(255, 15,
                                     pvp_gamer_dead_body(current_pvp_info), length_mode=length_mode)))
                             if len(survivors) <= 1:
                                 winner = survivors[0] if survivors else 0
@@ -6543,7 +6563,7 @@ async def serve_client(
                                     round_number=current_pvp_round, turn_number=current_pvp_turn_number,
                                     current_index=winner, status=4,
                                     additional_gamers=tuple(gamers[2:])), end_time=server_time)
-                                delayed_frames.append((duel_result.wait + .2, encode_frame(255, 5,
+                                delayed_frames.append((multi_actor_result.wait + .2, encode_frame(255, 5,
                                     pvp_end_body(current_pvp_info), length_mode=length_mode)))
                                 current_pvp_turn = -1
                         out_body = pb_varint(1, account.gid)

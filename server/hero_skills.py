@@ -11,6 +11,14 @@ SHELBY_SKILLS = (10020, 10021, 10024, 10025, 10026, 10027)
 DIANA_SKILLS = (10032, 10033)
 DIANA_BUFFS = (10051, 10052)
 VERA_SKILLS = (10035, 10036)
+HAWKE_SKILLS = (10038, 10039)
+
+
+def hawke_load_count(real: int, enhanced: int, *, upgraded: bool) -> int:
+    """Native 50% load: floor basic / ceil upgrade, including red rounds."""
+    if min(real, enhanced) < 0:
+        return 0
+    return (real + enhanced + int(upgraded)) // 2
 
 
 def vera_round(real: int, enhanced: int, *, upgraded: bool, randrange) -> int | None:
@@ -47,7 +55,7 @@ def effective_hero_skill(entry: dict) -> int:
     pairs = {0: (RABBIT_BASE, RABBIT_UPGRADE), 1: (BEAR_BASE, BEAR_UPGRADE),
              13: (MONKEY_BASE, MONKEY_UPGRADE), 14: (ARTHUR_BASE, ARTHUR_UPGRADE),
              15: (10020, 10021), 16: (10017, 10018), 17: (10022, 10023),
-             35: DIANA_SKILLS, 36: VERA_SKILLS}
+             35: DIANA_SKILLS, 36: VERA_SKILLS, 38: HAWKE_SKILLS}
     if hero in pairs:
         base, upgrade = pairs[hero]
         unlocked = (int(entry.get('starLevel', 0)) >= 5
