@@ -14,12 +14,17 @@ Antes de alterar uma função, consulte sua área na checklist e atualize o esta
 
 Código do servidor local, testes e descobertas sobre Hunter Roulette. **Não inclui o jogo nem um instalador pronto para jogar.** Git guarda o histórico das mudanças; GitHub guarda a cópia compartilhada na internet.
 
+Projeto comunitário inacabado: alterações e versões próprias são bem-vindas.
+Nosso código original é licenciado sob **AGPL-3.0-only** ([LICENSE](LICENSE));
+veja o [escopo de licença](docs/LICENSING.md). Essa licença não concede direitos
+sobre o jogo original, seus assets ou material de terceiros.
+
 ### Começo: instalar e baixar
 
-1. Peça um convite ao SuperBolinha2 e aceite no GitHub: este projeto é privado.
+1. Este projeto é público: pode clonar ou criar seu próprio fork. Para contribuir, envie um pull request.
 2. No Windows, instale [GitHub Desktop](https://desktop.github.com/) e entre na sua conta. Não precisa instalar Git separadamente para este tutorial.
 3. Instale [Python 3.14](https://www.python.org/downloads/windows/), marcando **Add Python to PATH**, se aparecer. Reabra o terminal após instalar. Use um editor como [VS Code](https://code.visualstudio.com/). Os testes não precisam de Unity, banco de dados ou bibliotecas Python extras.
-4. No Desktop: **File → Clone repository → URL**. Cole `https://github.com/SuperBolinha2/hunter-roulette-lab.git`, escolha uma pasta nova fora da instalação original do jogo e clique em **Clone**.
+4. No Desktop: **File → Clone repository → URL**. Cole `https://github.com/SuperBolinha2/hunter-roulette-lab-public.git`, escolha uma pasta nova fora da instalação original do jogo e clique em **Clone**.
 
 ### Meio: testar e modificar
 
@@ -41,10 +46,10 @@ Para jogar, é necessária uma cópia legítima, compatível e preparada para o 
 
 ### Начало: установка и скачивание
 
-1. Попросите приглашение у SuperBolinha2 и примите его на GitHub: проект закрытый.
+1. Проект публичный: клонируйте его или создайте свой fork. Для участия отправьте pull request.
 2. На Windows установите [GitHub Desktop](https://desktop.github.com/) и войдите в аккаунт. Для этого руководства отдельно устанавливать Git не нужно.
 3. Установите [Python 3.14](https://www.python.org/downloads/windows/), включив **Add Python to PATH**, если этот пункт есть. Заново откройте терминал. Подойдёт редактор [VS Code](https://code.visualstudio.com/). Для тестов не нужны Unity, база данных или дополнительные пакеты Python.
-4. В Desktop: **File → Clone repository → URL**. Вставьте `https://github.com/SuperBolinha2/hunter-roulette-lab.git`, выберите новую папку вне оригинальной установки игры и нажмите **Clone**.
+4. В Desktop: **File → Clone repository → URL**. Вставьте `https://github.com/SuperBolinha2/hunter-roulette-lab-public.git`, выберите новую папку вне оригинальной установки игры и нажмите **Clone**.
 
 ### Работа: тесты и изменения
 
@@ -66,10 +71,10 @@ Code du serveur local, tests et découvertes sur Hunter Roulette. **Le jeu et un
 
 ### Début : installer et télécharger
 
-1. Demandez une invitation à SuperBolinha2 et acceptez-la sur GitHub : le projet est privé.
+1. Le projet est public : clonez-le ou créez votre fork. Pour contribuer, envoyez une pull request.
 2. Sous Windows, installez [GitHub Desktop](https://desktop.github.com/) et connectez-vous. Pas besoin d'installer Git séparément pour ce guide.
 3. Installez [Python 3.14](https://www.python.org/downloads/windows/), en cochant **Add Python to PATH** si proposé. Rouvrez le terminal. Utilisez un éditeur comme [VS Code](https://code.visualstudio.com/). Les tests ne nécessitent ni Unity, ni base de données, ni paquets Python supplémentaires.
-4. Dans Desktop : **File → Clone repository → URL**. Collez `https://github.com/SuperBolinha2/hunter-roulette-lab.git`, choisissez un nouveau dossier hors de l'installation originale du jeu, puis cliquez sur **Clone**.
+4. Dans Desktop : **File → Clone repository → URL**. Collez `https://github.com/SuperBolinha2/hunter-roulette-lab-public.git`, choisissez un nouveau dossier hors de l'installation originale du jeu, puis cliquez sur **Clone**.
 
 ### Travail : tester et modifier
 
@@ -91,10 +96,10 @@ Código del servidor local, pruebas y descubrimientos sobre Hunter Roulette. **N
 
 ### Inicio: instalar y descargar
 
-1. Pide una invitación a SuperBolinha2 y acéptala en GitHub: el proyecto es privado.
+1. El proyecto es público: clónalo o crea tu fork. Para contribuir, envía un pull request.
 2. En Windows, instala [GitHub Desktop](https://desktop.github.com/) e inicia sesión. No necesitas instalar Git por separado para esta guía.
 3. Instala [Python 3.14](https://www.python.org/downloads/windows/), activando **Add Python to PATH** si aparece. Vuelve a abrir la terminal. Usa un editor como [VS Code](https://code.visualstudio.com/). Las pruebas no requieren Unity, base de datos ni paquetes adicionales de Python.
-4. En Desktop: **File → Clone repository → URL**. Pega `https://github.com/SuperBolinha2/hunter-roulette-lab.git`, elige una carpeta nueva fuera de la instalación original del juego y pulsa **Clone**.
+4. En Desktop: **File → Clone repository → URL**. Pega `https://github.com/SuperBolinha2/hunter-roulette-lab-public.git`, elige una carpeta nueva fuera de la instalación original del juego y pulsa **Clone**.
 
 ### Trabajo: probar y modificar
 
@@ -146,4 +151,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Start-Server.ps1 -Ga
 - [Descobertas / Исследования / Recherches / Investigaciones](docs/history/) — principalmente em português / в основном на португальском / surtout en portugais / principalmente en portugués.
 - [GitHub Desktop: official guide](https://docs.github.com/en/desktop/overview/getting-started-with-github-desktop)
 
-Projeto privado; não redistribua conteúdo proprietário do jogo. / Частный проект; не распространяйте проприетарные материалы игры. / Projet privé ; ne redistribuez pas les contenus propriétaires du jeu. / Proyecto privado; no redistribuyas contenido propietario del juego.
+Projeto público e inacabado, AGPL-3.0-only; não redistribua conteúdo proprietário do jogo. / Публичный незавершённый проект, AGPL-3.0-only; не распространяйте проприетарные материалы игры. / Projet public en développement, AGPL-3.0-only ; ne redistribuez pas les contenus propriétaires du jeu. / Proyecto público en desarrollo, AGPL-3.0-only; no redistribuyas contenido propietario del juego.

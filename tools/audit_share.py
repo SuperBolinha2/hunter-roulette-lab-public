@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULES = json.loads((ROOT / 'tools/Modules.json').read_text(encoding='utf-8'))
-ROOT_FILES = {'.gitignore','.gitattributes','README.md','CONTRIBUTING.md','SECURITY.md','AGENTS.md'}
+ROOT_FILES = {'.gitignore','.gitattributes','README.md','CONTRIBUTING.md','SECURITY.md','AGENTS.md','LICENSE'}
 secret = re.compile(r'(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{30,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)')
 
 

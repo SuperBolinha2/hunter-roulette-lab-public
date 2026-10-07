@@ -474,6 +474,7 @@ def response_body(
     diamond: int = 9_999_999,
     rcoin: int = 9_999_999,
     hunter_coin: int = 9_999_999,
+    profile: dict | None = None,
 ) -> bytes:
     """Build a conservative GamerLoginS2C response.
 
@@ -482,11 +483,11 @@ def response_body(
     """
     gamer = pb_message(
         pb_varint(1, gid),
-        pb_bytes(2, "Local Hunter"),
+        pb_bytes(2, (profile or {}).get('name', 'Local Hunter')),
         pb_varint(3, 1),
         pb_varint(4, 1),
-        pb_varint(5, 1),
-        pb_varint(6, 0),
+        pb_varint(5, (profile or {}).get('icon', 1)),
+        pb_varint(6, (profile or {}).get('frame', 0)),
         pb_varint(11, 1),
         pb_varint(12, 1),
         pb_varint(13, 1),
@@ -501,7 +502,7 @@ def response_body(
         pb_varint(40, prepare_hero),
         pb_varint(41, prepare_hero),
         pb_bytes(42, _item_config_message(103500, hunter_coin)),
-        pb_varint(48, 0),
+        pb_varint(48, (profile or {}).get('country', 0)),
     )
     return pb_message(pb_bytes(1, gamer), pb_bytes(2, _home_message(home_level)))
 
@@ -1028,11 +1029,15 @@ def _card_message(entry: dict) -> bytes:
     )
 
 
-def login_data_body(gid: int, session: str, inventory: dict) -> bytes:
+def login_data_body(gid: int, session: str, inventory: dict, *, clan_team: bytes | None = None,
+                    gamer_clan_team: bytes | None = None, profile: dict | None = None,
+                    accessories: bytes = b'') -> bytes:
     """Build the smallest GamerLoginGetDataS2C accepted by the client path."""
     season = season_state(inventory)
     server_time = pb_varint(1, season["serverTime"])
-    time_record = pb_message(pb_varint(7, 1))
+    time_record = pb_message(pb_varint(7, 1),
+        pb_varint(13, (profile or {}).get('lastRename', 0)),
+        pb_varint(14, (profile or {}).get('lastCountry', 0)))
     home_level = int(inventory.get("homeLevel", 1))
     home_exp = int(inventory.get("homeExp", 0))
     tutorial_finished = bool(inventory.get("tutorialFinished", True))
@@ -1041,7 +1046,11 @@ def login_data_body(gid: int, session: str, inventory: dict) -> bytes:
     hero_guns = inventory.get("heroGuns", [])
     return pb_message(
         pb_bytes(1, server_time),
+        *((pb_bytes(32, clan_team),) if clan_team is not None else ()),
+        *((pb_bytes(33, gamer_clan_team),) if gamer_clan_team is not None else ()),
         pb_bytes(2, time_record),
+        accessories,
+        pb_bytes(22, pb_varint(1, (profile or {}).get('renameFree', 0))),
         pb_varint(4, int(inventory.get("pvpCoin", 1000))),
         *(pb_bytes(5, _item_message(item)) for item in inventory.get("items", [])),
         *(pb_bytes(7, _badge_message(badge)) for badge in inventory.get("badges", [])),

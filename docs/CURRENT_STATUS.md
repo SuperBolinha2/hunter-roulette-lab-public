@@ -1,4 +1,12 @@
-# Current status — backend v63, 2026-09-30
+# Current status — public development snapshot,2026-10-07
+
+Public repository: hunter-roulette-lab-public. Original archive remains private.
+Current code includes Clan foundation and profile/avatar/frame/rename work;
+latest full local suite passed339 tests. Manual confirmations are scoped in the
+feature checklist; no claim of complete game support. Pre-match Bucket/Piggy,
+profile region/showcase/pass and full multi-account progression remain pending.
+The native client patch helper is deliberately omitted from public history.
+The remainder below is a dated2026-09-30 baseline, not a current completeness claim.
 
 286 local standard-library tests passed in the laboratory before this export.
 Source-copy/CI validation must also pass before publication. Local three-seat

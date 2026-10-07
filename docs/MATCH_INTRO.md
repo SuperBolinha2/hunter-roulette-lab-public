@@ -1,47 +1,14 @@
-# Match introduction — local validation complete
+# Match introduction — native client compatibility
 
-The owner confirmed a continuous opening with two characters on 2026-09-30.
-286 backend tests pass. The Exit-state regression has protocol coverage;
-clicking Exit after the correction was not separately confirmed by the owner.
+The local owner confirmed cinematic to participant-panel handoff on2026-09-30.
+The backend preloads the panel, but a compatible client callback is also needed.
+Backend sources alone do not prepare an unmodified Steam client.
 
-The server triggers the native cinematic and preloads the participant panel.
-The patched client waits for OnCutSceneFinish(-1), then shows that panel in
-the same UI frame. Skill cinematics retain their original executor. The server
-restores isStartPvp after introduction so the native Quit button can appear.
+This public repository intentionally excludes the optional native-client patch
+helper and all bundles/binaries/extracted Lua. The helper remains in the private
+archive for separate distribution review. No game assets are provided here.
+Do not disable compatibility/hash safeguards or overwrite the original client.
 
-**Both backend and client changes are required.** Sync-Lab copies only server
-sources. This helper does not prepare a clean Steam client. No game assets,
-bundles or binaries are distributed here.
-
-## Apply to an already compatible isolated copy
-
-Close game and backend. The helper accepts only the pre-patch lua.ab hash:
-`4A7AB2417E4E2E9299CE80C5E5F0E99B80CC8556850567D3F5DAC9D5755DB672`.
-On a mismatch, coordinate with the owner; never disable this safeguard.
-Already patched clients do not need to apply it again.
-
-Only this optional helper needs UnityPy; backend tests do not. The laboratory
-used version 1.25.3. Use a separate environment in the repository folder:
-
-```powershell
-python -m venv .local/intro-patcher
-.local/intro-patcher/Scripts/python.exe -m pip install UnityPy==1.25.3
-.local/intro-patcher/Scripts/python.exe tools/patch_match_intro_handoff.py --game-copy-root 'D:\Games\Hunter Roulette Lab'
-```
-
-The last command builds a preview and checks that all other TextAssets are
-unchanged. After successful preview, install with the game still closed:
-
-```powershell
-.local/intro-patcher/Scripts/python.exe tools/patch_match_intro_handoff.py --game-copy-root 'D:\Games\Hunter Roulette Lab' --install
-```
-
-It preserves a rollback under the copied game's
-`research/rollback/20260930-native-intro-handoff/lua-before-handoff.ab`.
-To roll back, close game/backend and restore that backup to the same copied
-client's `Game/Client_Data/StreamingAssets/AssetBundles/PC/fight/LuaBundles/lua.ab`.
-Never restore into the original installation.
-
-Restart the updated backend and compatible client. Check cinematic -> panel
--> ammo preparation -> turn, then Quit. Other modes/client revisions still
-require their own validation. See [research evidence](history/PLAYER_INTRO_TEST.md).
+Use a legitimately obtained compatible isolated copy; otherwise backend tests
+can run without visual gameplay. A clean-client installer remains future work.
+See historical research in [PLAYER_INTRO_TEST.md](history/PLAYER_INTRO_TEST.md).

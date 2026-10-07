@@ -11,6 +11,11 @@ from protocol import pvp_gamer_with_frenzy_cap
 from hero_shop import monkey_candidates, monkey_convert_shop
 from fair_duel import resolve_fair_duel
 from hero_drone import resolve_drone
+from clans import request as clan_request, snapshot as clan_snapshot, database as clan_database, ClanError
+from player_profile import (ensure as ensure_profile, equip as equip_profile,
+    accessory_body, accessory_notify, detail_body as profile_detail_body, ProfileError,
+    rename as rename_profile, projected as projected_profile)
+import copy
 from katie_guard import (KATIE_SKILLS, KATIE_BUFFS, activate as activate_katie,
     intercept as intercept_katie, expire as expire_katie, expiry_packet as katie_expiry_packet)
 
@@ -719,6 +724,82 @@ class GameState:
             if int(item.get("id", -1)) == item_id:
                 return int(item.get("number", default))
         return default
+
+    def clan_ids(self, account):
+        # Stable member keys are account names, never recycled transient gids.
+        names = {account.name.casefold()}
+        for team in clan_database(self.inventory)['teams'].values():
+            names.update(m['account'] for m in team['members'])
+        return {name: self.account_for(name).gid for name in names}
+
+    def profile_for(self, account):
+        with self._lock:
+            before = copy.deepcopy(self.inventory)
+            try:
+                value = ensure_profile(self.inventory, account.name.casefold(),
+                    'Local Hunter' if account.name.casefold() == 'local' else account.name)
+                if self.inventory != before:
+                    self._save_inventory_locked()
+                return projected_profile(copy.deepcopy(value), self.server_time())
+            except (ProfileError, OSError):
+                self.inventory = before
+                raise
+
+    def equip_accessory(self, account, accessory_id):
+        with self._lock:
+            before = copy.deepcopy(self.inventory)
+            try:
+                value = ensure_profile(self.inventory, account.name.casefold(),
+                    'Local Hunter' if account.name.casefold() == 'local' else account.name)
+                equip_profile(value, accessory_id)
+                # Keep the Clan member's public avatar/name consistent too.
+                for team in self.inventory.get('clanLab', {}).get('teams', {}).values():
+                    for member in team['members']:
+                        if member['key'] == account.name.casefold():
+                            member['icon'] = value['icon']
+                            member['display'] = value['name']
+                if self.inventory != before:
+                    self._save_inventory_locked()
+                return copy.deepcopy(value)
+            except (ProfileError, OSError):
+                self.inventory = before
+                raise
+
+    def rename_player(self, account, raw):
+        with self._lock:
+            before = copy.deepcopy(self.inventory)
+            try:
+                clan_database(self.inventory)  # Validate before committing a cross-profile/clan change.
+                ensure_profile(self.inventory, account.name.casefold(),
+                    'Local Hunter' if account.name.casefold() == 'local' else account.name)
+                result, value = rename_profile(self.inventory, account.name.casefold(), raw, self.server_time())
+                self._save_inventory_locked()
+                return result, copy.deepcopy(value)
+            except (ProfileError, ClanError, OSError):
+                self.inventory = before
+                raise
+
+    def clan_login(self, account):
+        ids = self.clan_ids(account)
+        with self._lock:
+            return clan_snapshot(self.inventory, account.name.casefold(), ids)
+
+    def handle_clan(self, account, act, body):
+        ids = self.clan_ids(account)
+        now = self.server_time()
+        with self._lock:
+            before = copy.deepcopy(self.inventory)
+            try:
+                result, notifications, changed = clan_request(self.inventory, account.name.casefold(),
+                    account.gid, ids, act, body, now,
+                    self.inventory.get('profileLab',{}).get('accounts',{}).get(account.name.casefold(),{}).get(
+                        'name','Local Hunter' if account.name == 'local' else account.name))
+                if changed:
+                    self._save_inventory_locked()
+                return result, notifications
+            except (ClanError, OSError):
+                self.inventory = before
+                raise
 
     def _find_item_locked(self, item_id: int) -> dict | None:
         return next(
@@ -2552,6 +2633,11 @@ async def serve_client(
 
             if service == "logic":
                 if (head.cmd, head.act) in {(1, 1), (1, 2)}:
+                    try:
+                        login_profile = state.profile_for(account)
+                    except (ProfileError, OSError):
+                        response_error = 400
+                        login_profile = None
                     prepare_hero = int(
                         state.inventory.get(
                             "selectedHero",
@@ -2570,9 +2656,78 @@ async def serve_client(
                         state.currency(103000),
                         state.currency(102000),
                         state.currency(103500),
+                        profile=login_profile,
                     )
                 elif (head.cmd, head.act) == (2, 3):
-                    out_body = login_data_body(account.gid, account.session, timed_inventory)
+                    try:
+                        clan_team, gamer_clan_team = state.clan_login(account)
+                        login_profile = state.profile_for(account)
+                        out_body = login_data_body(account.gid, account.session, timed_inventory,
+                            clan_team=clan_team, gamer_clan_team=gamer_clan_team,
+                            profile=login_profile, accessories=accessory_body(login_profile, 24))
+                    except (ClanError, ProfileError) as exc:
+                        response_error = exc.code
+                    except OSError:
+                        response_error = 400
+                elif (head.cmd, head.act) == (2, 2):
+                    try:
+                        out_body, renamed_profile = state.rename_player(account, parse_bytes_field(body, 2) or b'')
+                        post_frames.append(encode_frame(253,28,
+                            pb_bytes(1,pb_varint(1,renamed_profile['renameFree'])),length_mode=length_mode))
+                        clan_team,_ = state.clan_login(account)
+                        if clan_team is not None:
+                            post_frames.append(encode_frame(253,70,pb_bytes(1,clan_team),length_mode=length_mode))
+                        LOG.info('PROFILE rename completed gid=%d',account.gid)
+                    except (ProfileError,ClanError) as exc:
+                        response_error = exc.code
+                    except OSError:
+                        response_error = 400
+                elif head.cmd == 2 and head.act in {6, 12}:
+                    response_error = 757  # Rename/showcase/country await their dedicated implementation.
+                elif (head.cmd, head.act) == (2, 5):
+                    try:
+                        selected_profile = state.equip_accessory(account, parse_varint_field(body, 2) or 0)
+                        out_body = pb_varint(1, account.gid)
+                        post_frames.append(encode_frame(253, 29, accessory_notify(selected_profile), length_mode=length_mode))
+                        LOG.info('PROFILE accessory equipped gid=%d id=%d', account.gid, parse_varint_field(body, 2) or 0)
+                    except ProfileError as exc:
+                        response_error = exc.code
+                    except OSError:
+                        response_error = 400
+                elif (head.cmd, head.act) == (2, 9):
+                    target_gid = parse_varint_field(body, 2) or account.gid
+                    target_account = next((a for a in state._accounts.values() if a.gid == target_gid), None)
+                    if target_account is None:
+                        response_error = 544
+                    elif target_account.gid != account.gid:
+                        response_error = 757  # Other-player loadout isolation is a later stage.
+                    else:
+                        try:
+                            selected_profile = state.profile_for(target_account)
+                            _, target_clan = state.clan_login(target_account)
+                            # Until independent showcase editing is implemented, project actual equipped models.
+                            hero = int(state.inventory.get('selectedHero', 0))
+                            gun = next((int(g['gunId']) for g in state.inventory.get('heroGuns', [])
+                                        if int(g['heroId']) == hero), 0)
+                            _, hero_skin, _, gun_skin = pvp_appearance(state.inventory, hero, gun)
+                            out_body = profile_detail_body(target_gid, selected_profile, state.inventory,
+                                hero=hero, gun=gun, hero_skin=hero_skin, gun_skin=gun_skin, clan=target_clan)
+                        except (ProfileError, ClanError) as exc:
+                            response_error = exc.code
+                        except OSError:
+                            response_error = 400
+                elif head.cmd == 47:
+                    try:
+                        out_body, clan_notifications = state.handle_clan(account, head.act, body)
+                        for clan_act, clan_body in clan_notifications:
+                            post_frames.append(encode_frame(253, clan_act, clan_body, length_mode=length_mode))
+                        LOG.info('CLAN request act=%d gid=%d completed', head.act, account.gid)
+                    except ClanError as exc:
+                        response_error = exc.code
+                        LOG.warning('CLAN request act=%d gid=%d rejected code=%d', head.act, account.gid, exc.code)
+                    except OSError:
+                        response_error = 400
+                        LOG.error('CLAN persistence failed; in-memory transaction rolled back')
                 elif (head.cmd, head.act) == (2, 4):
                     # GetPVPServerAreaListS2C: repeated ServerAreaInfo field 2.
                     area = b"\x0a\x0f127.0.0.1:" + str(state.pvp_port).encode("ascii") + b"\x10\x01"

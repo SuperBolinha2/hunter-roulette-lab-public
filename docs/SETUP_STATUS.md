@@ -1,6 +1,7 @@
 # Collaboration setup — 2026-09-30
 
-Private repository: https://github.com/SuperBolinha2/hunter-roulette-lab
+Public development repository: https://github.com/SuperBolinha2/hunter-roulette-lab-public
+The earlier private archive remains separate; this publication uses sanitized authorship.
 Initial source published; Git credential login completed through the owner's
 browser, no passwords/tokens stored in this project. Original game and GM
 inventory were not touched. No collaborators invited yet.

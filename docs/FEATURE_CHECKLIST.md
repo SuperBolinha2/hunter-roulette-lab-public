@@ -92,11 +92,17 @@ A árvore abaixo segue os prints atuais: perfil e Base no alto; Clan/Friend/Back
 
 ## Perfil / Local Hunter
 
-- [ ] [PARCIAL] `PROFILE-01` Dados locais retornados pelo backend; conta GM sintética, sem provar estatísticas naturais.
+- [ ] [PARCIAL] `PROFILE-01` Login e detalhe próprio2/9 projetam perfil persistente por chave de conta, avatar/moldura selecionados e modelos equipados. Estatísticas naturais, ID público estável e vitrine independente ainda pendentes. Teste visual solicitado2026-10-05.
 - [ ] [AUDITAR] `PROFILE-02` Avatar, apelido, renomear, título/cartão de visita, moldura e coleções.
 - [ ] [AUDITAR] `PROFILE-03` Ver perfil próprio e de outro jogador, herói/equipamento e estatísticas.
 - [ ] [AUDITAR] `PROFILE-04` Histórico de partidas, relatório, detalhes e simulação/replay; respeitar versões do protocolo.
 - [ ] [FAZER] `PROFILE-05` Persistência isolada por usuário e estatísticas calculadas de partidas reais, não privilégios GM.
+- [ ] [AUDITAR] `PROFILE-06` País/bandeira: catálogo195, seleção e cooldown7dias recuperados; separado de idioma e região de conexão. [Plano do perfil](PROFILE_PLAN.md).
+- [ ] [AUDITAR] `PROFILE-07` Vitrine: herói, arma, skins, honor, toys e cartões; validar posse e não alterar loadout de combate incidentalmente.
+- [ ] [AUDITAR] `PROFILE-08` Coleção adquirida versus equipada/expirada; catálogo117 avatares/molduras não significa posse automática.
+- [ ] [PARCIAL] `PROFILE-09` Login/perfil próprio e avatar do membro do clã usam dados persistidos; perfil alheio, amigos, ranking, ID público estável e estatísticas naturais pendentes. [Plano](PROFILE_PLAN.md).
+- [ ] [TESTAR] `PROFILE-10` GM: liberação explícita dos51 avatares e66 molduras, permanentes; login24/seleção2/5/notify253/29 e rollback implementados. Reteste encontrou bloqueio: SDK usa conta interna nil, não placeholder local; concessão corrigida para conta efetiva e caso incluído no teste TCP. Outras contas não recebem liberação automática. Moldura1019 permanece oculta pela UI nativa. Confirmar seleção, efeito e relogin manualmente.
+- [ ] [TESTAR] `PROFILE-11` Renomear2/2: primeira alteração grátis, depois10 diamantes e24h; validação Unicode nativa, duplicidade, saldo, rollback, contador253/28 e membro do clã253/70. Nome exibido não altera chave de conta. Testes aprovados; confirmar nome/saldo/lobby/clã/relogin manualmente.
 
 ## Hero / personagens
 
@@ -243,8 +249,8 @@ Confirmações abaixo são por **família de efeito no trio local**, não por to
 - [ ] [AUDITAR] `PROP-LEGACY-01` X-Ray Goggles, Box of Real/Blank Bullets, Pack of Cigarettes, Stimulant, Cigar, Blockade e Crack the Safe: registros base existem, mas estão desabilitados na biblioteca auditada; confirmar legado/modo antes de implementar.
 - [ ] [AUDITAR] `PROP-SPECIAL-01` Demais cartas/passivas de Arcade/Codex/Trial: inventariadas entre os 359 registros do catálogo, não confundir com itens compráveis do trio.
 - [ ] [PARCIAL] `PROP-LIBRARY-01` Menu Prop/Card Library e descrições acessíveis; completar posse, desbloqueio, requisitos, custos e persistência de cada família.
-- [ ] [TESTAR] `PROP-PREMATCH-01` Selecionar/deselecionar item pré-partida, limite, gasto real, inventário depois e equipamento na intro.
-- [ ] [TESTAR] `PROP-PREMATCH-02` Começar sem item pré-partida não deve criar bolsa/cofrinho para todos.
+- [ ] [FUTURO] `PROP-PREMATCH-01` Selecionar/deselecionar item pré-partida, limite, gasto real, inventário depois e equipamento na intro. Bucket/Piggy Bank adiados a pedido do jogador em 2026-10-05; não alterar nesta etapa de Clan.
+- [ ] [FUTURO] `PROP-PREMATCH-02` Começar sem item pré-partida não deve criar bolsa/cofrinho para todos. Retomar junto de Bucket/Piggy Bank, após a frente Clan.
 - [ ] [TESTAR] `PROP-HUD-01` Cada buff: nome/descrição no hover, ícone HUD, objeto na mesa, número/ampulheta e remoção sincronizados.
 - [ ] [TESTAR] `PROP-RULES-01` Reuso/duplicação, arma cheia, HP0, alvo morto, bloqueios e substituição de inventário; rejeitar antes de debitar.
 - [ ] [FAZER] `PROP-ECONOMY-01` Preços/recompensas/limites e pools originais por modo (incluindo escalas 10×/100×/1000×), separados dos ajustes de teste.
@@ -307,6 +313,9 @@ Não confundir com a loja de itens **dentro** da partida.
 - [ ] [AUDITAR] `TASK-03` Conquistas, níveis/marcos e integração Steam; catálogo não prova envio/resgate.
 - [ ] [AUDITAR] `TASK-04` Sign In/Newbie Sign In, dias consecutivos/perdidos e recompensas.
 - [ ] [AUDITAR] `PASS-01` New Player Pass e Battle Pass: XP, nível, trilha grátis/VIP, compra de níveis, recompensa e duração.
+- [ ] [FAZER] `PASS-02` Estado/calendário e projeção no login: Battle Pass e New Player Pass separados;9 configurações Steam e558 linhas de recompensa pesquisadas. [Dependências](PROFILE_PLAN.md).
+- [ ] [FAZER] `PASS-03` XP por resultado elegível, progressão e resgate grátis único, persistência/rollback e repetição segura de pedidos.
+- [ ] [AUDITAR] `PASS-04` VIP e compra de níveis: preços/entitlements nativos, decisão de funcionamento local, sem simular pagamento Steam.
 - [ ] [AUDITAR] `EVENT-01` Loteria/Slot Machine, atividades e recompensas especiais; confirmar quais estão acessíveis nesta build.
 - [ ] [AUDITAR] `EVENT-02` Eventos sazonais e cronograma; separar decoração estática de sistema ativo.
 
@@ -314,11 +323,11 @@ Não confundir com a loja de itens **dentro** da partida.
 
 ### Clan
 
-- [ ] [AUDITAR] `CLAN-01` Lista, busca, criar, nome/avatar/descrição e requisitos/custos.
+- [ ] [PARCIAL] `CLAN-01` Fundação implementada: lista/busca por ID, criar, líder/membro inicial, nome/ícone/descrição, edição e login/restauração. Jogador relatou “parece funcionar bem” em2026-10-05; aprovação visual geral da primeira etapa, sem confirmação individual de cobrança/edição/reinício. Regras nativas: Base7, criação500.000 R-Chips, edição50.000, nome16/descrição30,6 membros, edição a cada24h. [Pesquisa e roteiro](CLAN_FOUNDATION.md).
 - [ ] [AUDITAR] `CLAN-02` Pedir entrada, aprovar/recusar, convite e lista de membros.
-- [ ] [AUDITAR] `CLAN-03` Cargos/permissões, remover, sair e transferência/dissolução.
-- [ ] [AUDITAR] `CLAN-04` Partidas de clã, equipe, regras, recompensa, caixa/rank e Heat Match.
-- [ ] [FAZER] `CLAN-05` Estado compartilhado real entre contas, persistência e autorização; não só janelas vazias.
+- [ ] [PARCIAL] `CLAN-03` Líder proprietário pode editar informações/configuração; membro não pode. Remover, sair, transferir e dissolver ainda não implementados, retornam indisponibilidade sem sucesso falso.
+- [ ] [AUDITAR] `CLAN-04` Caixas por contribuição, 55 combinações de recompensa, Heat Match semanal e molduras/diamantes pesquisados; calendários históricos e modos próprios exigem executor/scheduler e resgate idempotente. Sem recompensas concedidas nesta fundação.
+- [ ] [PARCIAL] `CLAN-05` Dados reais persistidos em inventário local privado, inclusão no login32/33 e notificações70/74; rollback de saldo/estado em falha de gravação, chaves de conta não dependem de gids reciclados. Protótipo localhost continua sem autenticação pública, inventário/economia por conta e broadcast para todas as conexões ainda pendentes.
 
 ### Friend / chat
 
