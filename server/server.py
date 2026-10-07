@@ -1729,7 +1729,9 @@ class ApiHandler(BaseHTTPRequestHandler):
                     "areas": [
                         {
                             "id": 1,
-                            "name": '{"Portuguese":"Local Lab","English":"Local Lab"}',
+                            # Native login label is fixed-width with rich text enabled,
+                            # but auto-fit disabled. Fit the full name without asset edits.
+                            "name": '{"Portuguese":"<size=18>Hunter Roulette Community</size>","English":"<size=18>Hunter Roulette Community</size>"}',
                             "start": 0,
                             "state": 4,
                         }
