@@ -78,6 +78,7 @@ Nomes em inglês ajudam a equipe internacional. Traduções aqui são rótulos d
 - [ ] [TESTAR] `AUTH-05` Falha de conexão, mensagem útil, tentar novamente e retorno sem travar.
 - [ ] [FAZER] `AUTH-06` Identidades separadas, sessão/reconexão e progresso de vários usuários sem misturar saves.
 - [ ] [AUDITAR] `AUTH-07` Tutorial inicial, revisão do tutorial, desbloqueio de funções e término persistente.
+- [x] [CONFIRMADO] `AUTH-08` Nome da seleção: Hunter Roulette Community. Primeiro reteste ocultou Community; texto enviado com size18 para caber sem alterar assets. Jogador confirmou2026-10-07: “ficou pequena a fonte, mas bem visivel”. Teste HTTP cobre português/inglês e preservação de ID/estado/endpoints;340 testes aprovados. Confirmação visual da tela enviada, sem generalizar para toda resolução/idioma/cliente.
 
 ## Lobby / tela principal
 
